@@ -44,6 +44,7 @@ public class GlueTestServiceGUIManager extends GlueServiceGUIManager {
 	private Button start, stop;
 	private BooleanProperty running = new SimpleBooleanProperty(false);
 	private TableView<Validation<?>> validations = new TableView<Validation<?>>();
+	private ScriptRuntime runtime;
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public GlueTestServiceGUIManager() {
@@ -87,7 +88,7 @@ public class GlueTestServiceGUIManager extends GlueServiceGUIManager {
 			environments.getItems().add("local");
 		}
 		environments.getSelectionModel().select("local");
-		start.addEventFilter(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+		start.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent event) {
 				txtLog.clear();
@@ -100,7 +101,7 @@ public class GlueTestServiceGUIManager extends GlueServiceGUIManager {
 					throw new RuntimeException(e);
 				}
 				Script script = artifact.getScript();
-				ScriptRuntime runtime = new ScriptRuntime(
+				runtime = new ScriptRuntime(
 					script, 
 					environment, 
 					false, 
@@ -124,7 +125,15 @@ public class GlueTestServiceGUIManager extends GlueServiceGUIManager {
 				
 				Thread runThread = new Thread(runtime);
 				runThread.setDaemon(true);
-				runThread.run();
+				runThread.start();
+			}
+		});
+		stop.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent arg0) {
+				if (runtime != null) {
+					runtime.abort();
+				}
 			}
 		});
 		

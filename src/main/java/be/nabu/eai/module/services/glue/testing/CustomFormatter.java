@@ -1,8 +1,6 @@
 package be.nabu.eai.module.services.glue.testing;
 
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 
 import be.nabu.glue.api.Executor;
 import be.nabu.glue.api.OutputFormatter;
@@ -22,7 +20,6 @@ public class CustomFormatter implements OutputFormatter {
 		public void stop(Severity state);
 	}
 	
-	private static Map<String, byte[]> resources = new HashMap<String, byte[]>();
 	private Handler handler;
 	
 	public CustomFormatter(OutputFormatter chained, Handler handler) {
@@ -45,9 +42,6 @@ public class CustomFormatter implements OutputFormatter {
 
 	@Override
 	public void after(Executor executor) {
-		if (depth == 1) {
-			handler.stop(Severity.INFO);
-		}
 		chained.after(executor);
 	}
 
