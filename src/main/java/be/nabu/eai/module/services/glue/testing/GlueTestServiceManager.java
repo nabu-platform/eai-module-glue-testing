@@ -10,7 +10,7 @@ public class GlueTestServiceManager extends GlueServiceManager {
 
 	@Override
 	public GlueServiceArtifact newArtifact(ResourceEntry entry) throws IOException {
-		return new GlueTestServiceArtifact(entry.getId(), entry.getRepository());
+		return new GlueTestServiceArtifact(entry.getId(), entry.getContainer(), entry.getRepository());
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })

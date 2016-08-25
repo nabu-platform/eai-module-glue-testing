@@ -157,7 +157,7 @@ public class GlueTestServiceGUIManager extends GlueServiceGUIManager {
 
 	@Override
 	protected GlueServiceArtifact newInstance(MainController controller, RepositoryEntry entry, Value<?>...values) throws IOException {
-		return new GlueTestServiceArtifact(entry.getId(), entry.getRepository());
+		return new GlueTestServiceArtifact(entry.getId(), entry.getContainer(), entry.getRepository());
 	}
 	
 	public ReadOnlyBooleanProperty runningProperty() {
