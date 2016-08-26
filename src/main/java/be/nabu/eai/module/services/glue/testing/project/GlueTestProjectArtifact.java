@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Set;
 
 import be.nabu.eai.module.services.glue.testing.GlueTestServiceArtifact;
+import be.nabu.eai.repository.RepositoryThreadFactory;
 import be.nabu.eai.repository.api.Repository;
 import be.nabu.eai.repository.artifacts.jaxb.JAXBArtifact;
 import be.nabu.glue.ScriptUtils;
@@ -138,7 +139,7 @@ public class GlueTestProjectArtifact extends JAXBArtifact<GlueTestProjectConfigu
 					maxScriptRuntime = project.getConfiguration().getMaxScriptRuntime();
 				}
 				ScriptRepository repository = new MatrixScriptRepository(new GlueTestProjectRepository(project), filter);
-				ScriptRunner runner = new MultithreadedScriptRunner(amountOfThreads == null ? 1 : amountOfThreads, maxScriptRuntime == null ? 300000 : maxScriptRuntime, false);
+				ScriptRunner runner = new MultithreadedScriptRunner(amountOfThreads == null ? 1 : amountOfThreads, maxScriptRuntime == null ? 300000 : maxScriptRuntime, false, new RepositoryThreadFactory(project.getRepository()));
 				ExecutionEnvironment environment = new SimpleExecutionEnvironment("local");
 				List<ScriptResult> results = runner.run(environment, repository, filter, new EnvironmentLabelEvaluator(null));
 				List<FormattedScriptResult> formatted = new ArrayList<FormattedScriptResult>();
