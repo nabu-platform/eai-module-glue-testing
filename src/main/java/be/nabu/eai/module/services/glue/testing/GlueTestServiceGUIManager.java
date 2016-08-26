@@ -60,9 +60,13 @@ public class GlueTestServiceGUIManager extends GlueServiceGUIManager {
 		
 		TabPane tabs = new TabPane();
 		initializeRunner(tabs, artifact);
-		Tab tab = new Tab("Interface");
-		tab.setContent(getIface(controller, artifact));
-		tabs.getTabs().add(tab);
+		
+		Tab tabResources = new Tab("Resources");
+		tabResources.setContent(getResources(controller, artifact));
+		
+		Tab tabIface = new Tab("Interface");
+		tabIface.setContent(getIface(controller, artifact));
+		tabs.getTabs().addAll(tabResources, tabIface);
 
 		split.getItems().addAll(ace.getWebView(), tabs);
 		pane.getChildren().add(split);
@@ -137,7 +141,7 @@ public class GlueTestServiceGUIManager extends GlueServiceGUIManager {
 			}
 		});
 		
-		buttons.getChildren().addAll(environments, start, stop);
+		buttons.getChildren().addAll(start, stop);
 
 		runner.getChildren().addAll(buttons, txtLog);
 		VBox.setVgrow(txtLog, Priority.ALWAYS);
