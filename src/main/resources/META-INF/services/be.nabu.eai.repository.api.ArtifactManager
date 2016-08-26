@@ -1,1 +1,2 @@
 be.nabu.eai.module.services.glue.testing.GlueTestServiceManager
+be.nabu.eai.module.services.glue.testing.project.GlueTestProjectManager
