@@ -3,6 +3,10 @@ package be.nabu.eai.module.services.glue.testing;
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
@@ -22,17 +26,23 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import be.nabu.eai.developer.MainController;
+import be.nabu.eai.developer.managers.util.SimpleProperty;
+import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
+import be.nabu.eai.developer.util.EAIDeveloperUtils;
 import be.nabu.eai.module.services.glue.GlueServiceArtifact;
 import be.nabu.eai.module.services.glue.GlueServiceGUIManager;
 import be.nabu.eai.module.services.glue.testing.CustomFormatter.Handler;
 import be.nabu.eai.repository.resources.RepositoryEntry;
 import be.nabu.glue.ScriptRuntime;
+import be.nabu.glue.ScriptUtils;
 import be.nabu.glue.api.ExecutionEnvironment;
+import be.nabu.glue.api.ParameterDescription;
 import be.nabu.glue.api.Script;
 import be.nabu.glue.api.runs.GlueValidation;
 import be.nabu.glue.impl.SimpleExecutionEnvironment;
 import be.nabu.glue.impl.formatters.MarkdownOutputFormatter;
 import be.nabu.jfx.control.ace.AceEditor;
+import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
 import be.nabu.libs.validator.api.Validation;
 import be.nabu.libs.validator.api.ValidationMessage.Severity;
@@ -104,12 +114,44 @@ public class GlueTestServiceGUIManager extends GlueServiceGUIManager {
 					txtLog.setText("Can not find environment");
 					throw new RuntimeException(e);
 				}
+				Map<String, Object> input = new HashMap<String, Object>();
 				Script script = artifact.getScript();
+				try {
+					List<ParameterDescription> parameters = ScriptUtils.getInputs(script);
+					if (parameters == null || parameters.isEmpty()) {
+						run(txtLog, environment, input, script);
+					}
+					else {
+						Set<Property<?>> properties = new LinkedHashSet<Property<?>>();
+						for (ParameterDescription parameter : parameters) {
+							properties.add(new SimpleProperty<String>(parameter.getName(), String.class, false));
+						}
+						final SimplePropertyUpdater updater = new SimplePropertyUpdater(true, properties);
+						EAIDeveloperUtils.buildPopup(MainController.getInstance(), updater, "Run Test Case", new EventHandler<ActionEvent>() {
+							@Override
+							public void handle(ActionEvent arg0) {
+								for (ParameterDescription parameter : parameters) {
+									String value = updater.getValue(parameter.getName());
+									if (value != null && !value.isEmpty()) {
+										input.put(parameter.getName(), value);
+									}
+								}
+								run(txtLog, environment, input, script);
+							}
+						});
+					}
+				}
+				catch (Exception e) {
+					throw new RuntimeException(e);
+				}
+			}
+
+			private void run(final TextArea txtLog, ExecutionEnvironment environment, Map<String, Object> input, Script script) {
 				runtime = new ScriptRuntime(
 					script, 
 					environment, 
 					false, 
-					new HashMap<String, Object>()
+					input
 				);
 				runtime.setFormatter(new CustomFormatter(new MarkdownOutputFormatter(new TextAreaWriter(txtLog)), new Handler() {
 					@Override

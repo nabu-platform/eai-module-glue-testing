@@ -47,7 +47,7 @@ public class TableValidations {
 						setText(item);
 						TableRow<Validation<?>> row = getTableRow();
 						if (item != null) {
-							if (Severity.ERROR.name().equals(item) || Severity.CRITICAL.name().equals(item)) {
+							if (Severity.ERROR.name().equals(item) || Severity.CRITICAL.name().equals(item) || "FAILED".equals(item)) {
 								row.setStyle("-fx-control-inner-background: #ffd5d6;");
 							}
 							else if (Severity.WARNING.name().equals(item)) {
