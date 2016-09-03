@@ -69,6 +69,9 @@ public class GlueTestServiceGUIManager extends GlueServiceGUIManager {
 		SplitPane split = new SplitPane();
 		split.setOrientation(Orientation.VERTICAL);
 		final AceEditor ace = getEditor(artifact);
+		ace.setLiveAutocompletion(false);
+		
+		addAutocomplete(artifact, ace);
 		
 		TabPane tabs = new TabPane();
 		initializeRunner(tabs, artifact);
@@ -97,7 +100,7 @@ public class GlueTestServiceGUIManager extends GlueServiceGUIManager {
 		AnchorPane.setLeftAnchor(split, 0d);
 		AnchorPane.setRightAnchor(split, 0d);
 	}
-	
+
 	private void initializeRunner(TabPane tabs, final GlueServiceArtifact artifact) throws IOException {
 		VBox runner = new VBox();
 		HBox buttons = new HBox();
