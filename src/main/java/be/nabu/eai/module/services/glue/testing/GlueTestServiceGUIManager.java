@@ -21,6 +21,8 @@ import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -80,6 +82,15 @@ public class GlueTestServiceGUIManager extends GlueServiceGUIManager {
 
 		split.getItems().addAll(ace.getWebView(), tabs);
 		pane.getChildren().add(split);
+		
+		pane.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+			@Override
+			public void handle(KeyEvent event) {
+				if (start != null && event.getCode() == KeyCode.R && event.isControlDown() && event.isShiftDown() && !event.isAltDown()) {
+					start.fire();
+				}
+			}
+		});
 		
 		AnchorPane.setBottomAnchor(split, 0d);
 		AnchorPane.setTopAnchor(split, 0d);
