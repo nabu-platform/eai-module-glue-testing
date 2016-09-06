@@ -21,6 +21,7 @@ import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
+import javafx.scene.control.TabPane.TabClosingPolicy;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.AnchorPane;
@@ -74,6 +75,7 @@ public class GlueTestServiceGUIManager extends GlueServiceGUIManager {
 		addAutocomplete(artifact, ace);
 		
 		TabPane tabs = new TabPane();
+		tabs.setTabClosingPolicy(TabClosingPolicy.UNAVAILABLE);
 		initializeRunner(tabs, artifact);
 		
 		Tab tabResources = new Tab("Resources");
@@ -122,7 +124,7 @@ public class GlueTestServiceGUIManager extends GlueServiceGUIManager {
 				txtLog.clear();
 				ExecutionEnvironment environment;
 				try {
-					environment = new SimpleExecutionEnvironment(environments.getSelectionModel().getSelectedItem());
+					environment = new SimpleExecutionEnvironment(MainController.getInstance().getServer().getName());
 				}
 				catch (Exception e) {
 					txtLog.setText("Can not find environment");
