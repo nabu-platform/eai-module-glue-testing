@@ -9,7 +9,6 @@ import java.util.Map;
 
 import be.nabu.eai.module.services.glue.GlueServiceArtifact;
 import be.nabu.eai.repository.api.Repository;
-import be.nabu.glue.ScriptRuntime;
 import be.nabu.glue.api.runs.GlueValidation;
 import be.nabu.glue.api.runs.ScriptResult;
 import be.nabu.glue.impl.SimpleScriptResult;
@@ -17,6 +16,7 @@ import be.nabu.glue.impl.formatted.FormattedScriptResult;
 import be.nabu.glue.impl.formatters.MarkdownOutputFormatter;
 import be.nabu.glue.services.CombinedExecutionContextImpl;
 import be.nabu.glue.services.GlueService;
+import be.nabu.glue.utils.ScriptRuntime;
 import be.nabu.libs.resources.api.ResourceContainer;
 import be.nabu.libs.services.api.ExecutionContext;
 import be.nabu.libs.services.api.Service;
