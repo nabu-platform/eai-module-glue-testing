@@ -22,15 +22,15 @@ import be.nabu.libs.services.api.ExecutionContext;
 import be.nabu.libs.services.api.Service;
 import be.nabu.libs.services.api.ServiceException;
 import be.nabu.libs.services.api.ServiceInstance;
+import be.nabu.libs.services.pojo.MethodServiceInterface;
 import be.nabu.libs.types.TypeUtils;
 import be.nabu.libs.types.api.ComplexContent;
+import be.nabu.libs.types.api.ComplexType;
 import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.api.ModifiableComplexType;
-import be.nabu.libs.types.api.Type;
-import be.nabu.libs.types.base.ValueImpl;
+import be.nabu.libs.types.base.ComplexElementImpl;
 import be.nabu.libs.types.java.BeanInstance;
 import be.nabu.libs.types.java.BeanResolver;
-import be.nabu.libs.types.structure.SuperTypeProperty;
 
 public class GlueTestServiceArtifact extends GlueServiceArtifact {
 
@@ -50,7 +50,10 @@ public class GlueTestServiceArtifact extends GlueServiceArtifact {
 			synchronized(this) {
 				if (service == null) {
 					GlueService service = new GlueService(getScript(), getExecutionEnvironment(), null);
-					((ModifiableComplexType) service.getServiceInterface().getOutputDefinition()).setProperty(new ValueImpl<Type>(SuperTypeProperty.getInstance(), BeanResolver.getInstance().resolve(FormattedScriptResult.class)));
+					service.setImplementedInterface(MethodServiceInterface.wrap(TestCase.class, "run"));
+					((ModifiableComplexType) service.getServiceInterface().getOutputDefinition()).add(
+						new ComplexElementImpl("result", (ComplexType) BeanResolver.getInstance().resolve(FormattedScriptResult.class), service.getServiceInterface().getOutputDefinition()));
+//					((ModifiableComplexType) service.getServiceInterface().getOutputDefinition()).setProperty(new ValueImpl<Type>(SuperTypeProperty.getInstance(), BeanResolver.getInstance().resolve(FormattedScriptResult.class)));
 					this.service = service;
 				}
 			}
@@ -99,9 +102,10 @@ public class GlueTestServiceArtifact extends GlueServiceArtifact {
 			ScriptResult result = new SimpleScriptResult(service.getEnvironment(), runtime.getScript(), runtime.getStarted(), runtime.getStopped(), runtime.getException(), writer.toString(), validations == null ? new ArrayList<GlueValidation>() : validations);
 			FormattedScriptResult format = FormattedScriptResult.format(result, null);
 			BeanInstance<FormattedScriptResult> beanInstance = new BeanInstance<FormattedScriptResult>(format);
-			for (Element<?> field : TypeUtils.getAllChildren(beanInstance.getType())) {
-				output.set(field.getName(), beanInstance.get(field.getName()));
-			}
+			output.set("result", beanInstance);
+//			for (Element<?> field : TypeUtils.getAllChildren(beanInstance.getType())) {
+//				output.set(field.getName(), beanInstance.get(field.getName()));
+//			}
 			return output;
 		}
 

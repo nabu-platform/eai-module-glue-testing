@@ -7,22 +7,24 @@ import javax.xml.bind.annotation.XmlType;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
 import be.nabu.eai.api.EnvironmentSpecific;
-import be.nabu.eai.module.services.glue.testing.GlueTestServiceArtifact;
+import be.nabu.eai.api.InterfaceFilter;
 import be.nabu.eai.repository.jaxb.ArtifactXMLAdapter;
+import be.nabu.libs.services.api.DefinedService;
 
 @XmlRootElement(name = "testProject")
 @XmlType(propOrder = { "amountOfThreads", "maxScriptRuntime", "tests" })
 public class GlueTestProjectConfiguration {
 	
-	private List<GlueTestServiceArtifact> tests;
+	private List<DefinedService> tests;
 	private Integer amountOfThreads;
 	private Long maxScriptRuntime;
 	
 	@XmlJavaTypeAdapter(value = ArtifactXMLAdapter.class)
-	public List<GlueTestServiceArtifact> getTests() {
+	@InterfaceFilter(implement = "be.nabu.eai.module.services.glue.testing.TestCase.run")	
+	public List<DefinedService> getTests() {
 		return tests;
 	}
-	public void setTests(List<GlueTestServiceArtifact> tests) {
+	public void setTests(List<DefinedService> tests) {
 		this.tests = tests;
 	}
 	
