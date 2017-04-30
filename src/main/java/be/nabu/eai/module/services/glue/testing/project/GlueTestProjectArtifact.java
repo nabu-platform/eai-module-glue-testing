@@ -13,7 +13,6 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import be.nabu.eai.module.services.glue.DynamicScript;
 import be.nabu.eai.module.services.glue.GlueServiceArtifact;
 import be.nabu.eai.module.services.glue.testing.GlueTestServiceArtifact;
 import be.nabu.eai.repository.RepositoryThreadFactory;
@@ -30,6 +29,7 @@ import be.nabu.glue.api.runs.ScriptResultInterpreter;
 import be.nabu.glue.api.runs.ScriptRunner;
 import be.nabu.glue.core.impl.EnvironmentLabelEvaluator;
 import be.nabu.glue.core.impl.parsers.GlueParserProvider;
+import be.nabu.glue.core.repositories.DynamicScript;
 import be.nabu.glue.impl.MatrixScriptRepository;
 import be.nabu.glue.impl.MultithreadedScriptRunner;
 import be.nabu.glue.impl.SimpleExecutionEnvironment;

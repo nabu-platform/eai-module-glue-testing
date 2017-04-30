@@ -9,8 +9,6 @@ import javax.jws.WebParam;
 import javax.jws.WebResult;
 import javax.jws.WebService;
 
-import be.nabu.eai.module.services.glue.DynamicScript;
-import be.nabu.eai.module.services.glue.DynamicScriptRepository;
 import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.glue.api.ExecutionException;
 import be.nabu.glue.api.Executor;
@@ -20,6 +18,8 @@ import be.nabu.glue.api.ScriptRepository;
 import be.nabu.glue.api.runs.GlueValidation;
 import be.nabu.glue.core.impl.methods.TestMethods;
 import be.nabu.glue.core.impl.parsers.GlueParserProvider;
+import be.nabu.glue.core.repositories.DynamicScript;
+import be.nabu.glue.core.repositories.DynamicScriptRepository;
 import be.nabu.glue.impl.SimpleExecutionEnvironment;
 import be.nabu.glue.impl.formatted.FormattedValidation;
 import be.nabu.glue.services.CombinedExecutionContextImpl;
