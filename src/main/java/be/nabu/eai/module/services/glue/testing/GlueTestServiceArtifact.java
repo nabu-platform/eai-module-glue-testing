@@ -25,12 +25,8 @@ import be.nabu.libs.services.api.ServiceInstance;
 import be.nabu.libs.services.pojo.MethodServiceInterface;
 import be.nabu.libs.types.TypeUtils;
 import be.nabu.libs.types.api.ComplexContent;
-import be.nabu.libs.types.api.ComplexType;
 import be.nabu.libs.types.api.Element;
-import be.nabu.libs.types.api.ModifiableComplexType;
-import be.nabu.libs.types.base.ComplexElementImpl;
 import be.nabu.libs.types.java.BeanInstance;
-import be.nabu.libs.types.java.BeanResolver;
 
 public class GlueTestServiceArtifact extends GlueServiceArtifact {
 
@@ -51,8 +47,8 @@ public class GlueTestServiceArtifact extends GlueServiceArtifact {
 				if (service == null) {
 					GlueService service = new GlueService(getScript(), getExecutionEnvironment(), null);
 					service.setImplementedInterface(MethodServiceInterface.wrap(TestCase.class, "run"));
-					((ModifiableComplexType) service.getServiceInterface().getOutputDefinition()).add(
-						new ComplexElementImpl("result", (ComplexType) BeanResolver.getInstance().resolve(FormattedScriptResult.class), service.getServiceInterface().getOutputDefinition()));
+//					((ModifiableComplexType) service.getServiceInterface().getOutputDefinition()).add(
+//						new ComplexElementImpl("result", (ComplexType) BeanResolver.getInstance().resolve(FormattedScriptResult.class), service.getServiceInterface().getOutputDefinition()));
 //					((ModifiableComplexType) service.getServiceInterface().getOutputDefinition()).setProperty(new ValueImpl<Type>(SuperTypeProperty.getInstance(), BeanResolver.getInstance().resolve(FormattedScriptResult.class)));
 					this.service = service;
 				}
