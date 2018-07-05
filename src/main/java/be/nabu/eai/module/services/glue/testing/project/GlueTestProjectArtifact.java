@@ -45,20 +45,27 @@ import be.nabu.libs.services.api.Service;
 import be.nabu.libs.services.api.ServiceException;
 import be.nabu.libs.services.api.ServiceInstance;
 import be.nabu.libs.services.api.ServiceInterface;
-import be.nabu.libs.types.SimpleTypeWrapperFactory;
+import be.nabu.libs.services.pojo.MethodServiceInterface;
 import be.nabu.libs.types.api.ComplexContent;
-import be.nabu.libs.types.api.ComplexType;
-import be.nabu.libs.types.api.Type;
-import be.nabu.libs.types.base.SimpleElementImpl;
-import be.nabu.libs.types.base.ValueImpl;
-import be.nabu.libs.types.java.BeanResolver;
-import be.nabu.libs.types.properties.MinOccursProperty;
-import be.nabu.libs.types.structure.Structure;
-import be.nabu.libs.types.structure.SuperTypeProperty;
 
 public class GlueTestProjectArtifact extends JAXBArtifact<GlueTestProjectConfiguration> implements DefinedService {
 
-	private Structure input, output;
+	public static class GlueTestProjectOutput {
+		private List<FormattedScriptResult> results;
+		private FormattedDashboard summary;
+		public List<FormattedScriptResult> getResults() {
+			return results;
+		}
+		public void setResults(List<FormattedScriptResult> results) {
+			this.results = results;
+		}
+		public FormattedDashboard getSummary() {
+			return summary;
+		}
+		public void setSummary(FormattedDashboard summary) {
+			this.summary = summary;
+		}
+	}
 	
 	public GlueTestProjectArtifact(String id, ResourceContainer<?> directory, Repository repository) {
 		super(id, directory, repository, "test-project.xml", GlueTestProjectConfiguration.class);
@@ -66,39 +73,7 @@ public class GlueTestProjectArtifact extends JAXBArtifact<GlueTestProjectConfigu
 
 	@Override
 	public ServiceInterface getServiceInterface() {
-		if (input == null) {
-			synchronized(this) {
-				if (input == null) {
-					input = new Structure();
-					input.setName("input");
-					input.add(new SimpleElementImpl<Integer>("amountOfThreads", SimpleTypeWrapperFactory.getInstance().getWrapper().wrap(Integer.class), input, new ValueImpl<Integer>(MinOccursProperty.getInstance(), 0)));
-					input.add(new SimpleElementImpl<Long>("maxScriptRuntime", SimpleTypeWrapperFactory.getInstance().getWrapper().wrap(Long.class), input, new ValueImpl<Integer>(MinOccursProperty.getInstance(), 0)));
-				}
-			}
-		}
-		if (output == null) {
-			synchronized(this) {
-				if (output == null) {
-					output = new Structure();
-					output.setName("output");
-					output.setProperty(new ValueImpl<Type>(SuperTypeProperty.getInstance(), BeanResolver.getInstance().resolve(GlueTestProjectResult.class)));
-				}
-			}
-		}
-		return new ServiceInterface() {
-			@Override
-			public ComplexType getInputDefinition() {
-				return input;
-			}
-			@Override
-			public ComplexType getOutputDefinition() {
-				return output;
-			}
-			@Override
-			public ServiceInterface getParent() {
-				return null;
-			}
-		};
+		return MethodServiceInterface.wrap(GlueTestProjectInterface.class, "run");
 	}
 
 	@Override
@@ -156,9 +131,13 @@ public class GlueTestProjectArtifact extends JAXBArtifact<GlueTestProjectConfigu
 					formatted.add(FormattedScriptResult.format(result, null));
 				}
 				FormattedDashboard dashboard = FormattedDashboard.format(interpreter, results.toArray(new ScriptResult[results.size()]));
+				GlueTestProjectOutput result = new GlueTestProjectOutput();
+				result.setResults(formatted);
+				result.setSummary(dashboard);
 				ComplexContent output = project.getServiceInterface().getOutputDefinition().newInstance();
-				output.set("results", formatted);
-				output.set("summary", dashboard);
+				output.set("result", result);
+				//output.set("results", formatted);
+				//output.set("summary", dashboard);
 				return output;
 			}
 			catch (IOException e) {

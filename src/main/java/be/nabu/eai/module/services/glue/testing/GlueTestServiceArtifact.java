@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import be.nabu.eai.module.services.glue.AllowTargetSwitchProvider;
 import be.nabu.eai.module.services.glue.GlueServiceArtifact;
 import be.nabu.eai.repository.api.Repository;
 import be.nabu.glue.api.runs.GlueValidation;
@@ -32,8 +33,16 @@ public class GlueTestServiceArtifact extends GlueServiceArtifact {
 
 	private GlueService service;
 	
+	// don't allow remote switching for glue services
+	// we want to be able to pass along webdriver instances
 	public GlueTestServiceArtifact(String id, ResourceContainer<?> directory, Repository repository) throws IOException {
-		super(id, directory, repository);
+		super(id, directory, repository, new AllowTargetSwitchProvider() {
+			
+			@Override
+			public boolean allowTargetSwitch(Service service, ExecutionContext context, ComplexContent input) {
+				return !(service instanceof GlueServiceArtifact);
+			}
+		});
 	}
 
 	@Override
