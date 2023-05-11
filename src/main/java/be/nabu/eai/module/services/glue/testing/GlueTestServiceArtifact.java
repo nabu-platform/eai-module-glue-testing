@@ -88,9 +88,15 @@ public class GlueTestServiceArtifact extends GlueServiceArtifact {
 					map.put(element.getName(), input.get(element.getName()));
 				}
 			}
+			ScriptRuntime currentRuntime = ScriptRuntime.getRuntime();
 			ScriptRuntime runtime = new ScriptRuntime(service.getScript(), new CombinedExecutionContextImpl(executionContext, service.getEnvironment(), service.getLabelEvaluator()), map);
 			StringWriter writer = new StringWriter();
-			runtime.setFormatter(new MarkdownOutputFormatter(writer));
+			MarkdownOutputFormatter formatter = new MarkdownOutputFormatter(writer);
+			if (currentRuntime != null) {
+				formatter.setParent(currentRuntime.getFormatter());
+			}
+			formatter.setAllowDeepLogging(true);
+			runtime.setFormatter(formatter);
 			runtime.run();
 			if (runtime.getException() != null) {
 				throw new ServiceException(runtime.getException());
