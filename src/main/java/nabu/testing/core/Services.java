@@ -1,7 +1,11 @@
 package nabu.testing.core;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.Charset;
+import java.text.ParseException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
@@ -9,6 +13,9 @@ import javax.jws.WebParam;
 import javax.jws.WebResult;
 import javax.jws.WebService;
 
+import be.nabu.eai.module.services.glue.testing.GlueTestServiceArtifact;
+import be.nabu.eai.module.services.glue.testing.project.GlueTestProjectArtifact;
+import be.nabu.eai.module.services.glue.testing.project.GlueTestProjectArtifact.GlueTestProjectOutput;
 import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.glue.api.ExecutionException;
 import be.nabu.glue.api.Executor;
@@ -25,15 +32,73 @@ import be.nabu.glue.impl.formatted.FormattedValidation;
 import be.nabu.glue.services.CombinedExecutionContextImpl;
 import be.nabu.glue.services.ServiceMethodProvider;
 import be.nabu.glue.utils.ScriptRuntime;
+import be.nabu.libs.datastore.api.DataProperties;
+import be.nabu.libs.resources.ResourceFactory;
+import be.nabu.libs.resources.api.ReadableResource;
+import be.nabu.libs.resources.api.Resource;
+import be.nabu.libs.resources.memory.MemoryDirectory;
+import be.nabu.libs.resources.memory.MemoryItem;
 import be.nabu.libs.services.ServiceRuntime;
 import be.nabu.libs.services.api.DefinedService;
 import be.nabu.libs.services.api.ExecutionContext;
+import be.nabu.libs.services.api.ServiceException;
+import be.nabu.libs.types.api.ComplexContent;
+import be.nabu.utils.io.IOUtils;
+import be.nabu.utils.io.api.ByteBuffer;
+import be.nabu.utils.io.api.ReadableContainer;
+import be.nabu.utils.io.api.WritableContainer;
+import nabu.testing.core.types.TestAttachment;
 
 @WebService
 public class Services {
 
 	private ExecutionContext executionContext;
 	private boolean generated;
+	
+	public GlueTestProjectOutput runScript(@WebParam(name = "script") String script, @WebParam(name = "id") String id, @WebParam(name = "matrix") String matrix, @WebParam(name = "resources") List<URI> resources, @WebParam(name = "attachments") List<TestAttachment> attachments) throws IOException, ServiceException, ParseException, URISyntaxException {
+		MemoryDirectory root = new MemoryDirectory();
+		MemoryDirectory privateDirectory = (MemoryDirectory) root.create(EAIResourceRepository.PRIVATE, Resource.CONTENT_TYPE_DIRECTORY);
+		GlueTestServiceArtifact test = new GlueTestServiceArtifact(id, root, EAIResourceRepository.getInstance());
+		test.setUseJsonFormatting(true);
+		test.setContent(script);
+		if (matrix != null) {
+			MemoryItem matrixResource = (MemoryItem) privateDirectory.create("input.matrix.csv", "text/plain");
+			try (WritableContainer<ByteBuffer> writable = matrixResource.getWritable()) {
+				writable.write(IOUtils.wrap(matrix.getBytes(Charset.forName("UTF-8")), true));
+			}
+		}
+		if (resources != null) {
+			for (URI resource : resources) {
+				if (resource == null) {
+					continue;
+				}
+				nabu.frameworks.datastore.Services datastore = nabu.frameworks.datastore.Services.getInstance(ServiceRuntime.getRuntime());
+				DataProperties properties = datastore.properties(resource);
+				if (properties == null) {
+					throw new IllegalArgumentException("Could not resolve: " + resource);
+				}
+				MemoryItem targetResource = (MemoryItem) privateDirectory.create(properties.getName(), properties.getContentType());
+				try (WritableContainer<ByteBuffer> writable = targetResource.getWritable(); ReadableContainer<ByteBuffer> readable = IOUtils.wrap(datastore.retrieve(resource, false))) {
+					IOUtils.copyBytes(readable, writable);
+				}
+			}
+		}
+		if (attachments != null) {
+			for (TestAttachment attachment : attachments) {
+				if (attachment == null) {
+					continue;
+				}
+				MemoryItem targetResource = (MemoryItem) privateDirectory.create(attachment.getName(), attachment.getContentType());
+				try (WritableContainer<ByteBuffer> writable = targetResource.getWritable()) {
+					writable.write(IOUtils.wrap(attachment.getContent(), true));
+				}
+			}
+		}
+		GlueTestProjectArtifact glueTestProjectArtifact = new GlueTestProjectArtifact(id + ".$project", root, EAIResourceRepository.getInstance());
+		glueTestProjectArtifact.getConfig().setTests(Arrays.asList(test));
+		ComplexContent output = glueTestProjectArtifact.newInstance().execute(executionContext, null);
+		return (GlueTestProjectOutput) output.get("result");
+	}
 	
 	@SuppressWarnings("unchecked")
 	@WebResult(name = "result")

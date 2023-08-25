@@ -10,11 +10,15 @@ import java.util.Map;
 import be.nabu.eai.module.services.glue.AllowTargetSwitchProvider;
 import be.nabu.eai.module.services.glue.GlueServiceArtifact;
 import be.nabu.eai.repository.api.Repository;
+import be.nabu.glue.api.runs.GlueAttachment;
 import be.nabu.glue.api.runs.GlueValidation;
 import be.nabu.glue.api.runs.ScriptResult;
+import be.nabu.glue.core.impl.methods.TestMethods;
+import be.nabu.glue.core.impl.methods.v2.ScriptMethods;
 import be.nabu.glue.impl.SimpleScriptResult;
 import be.nabu.glue.impl.formatted.FormattedScriptResult;
 import be.nabu.glue.impl.formatters.MarkdownOutputFormatter;
+import be.nabu.glue.json.JSONOutputFormatter;
 import be.nabu.glue.services.CombinedExecutionContextImpl;
 import be.nabu.glue.services.GlueService;
 import be.nabu.glue.utils.ScriptRuntime;
@@ -32,6 +36,7 @@ import be.nabu.libs.types.java.BeanInstance;
 public class GlueTestServiceArtifact extends GlueServiceArtifact {
 
 	private GlueService service;
+	private boolean useJsonFormatting = false;
 	
 	// don't allow remote switching for glue services
 	// we want to be able to pass along webdriver instances
@@ -47,7 +52,7 @@ public class GlueTestServiceArtifact extends GlueServiceArtifact {
 
 	@Override
 	public ServiceInstance newInstance() {
-		return new GlueTestServiceInstance(getService());
+		return new GlueTestServiceInstance(getService(), useJsonFormatting);
 	}
 
 	protected GlueService getService() {
@@ -73,9 +78,11 @@ public class GlueTestServiceArtifact extends GlueServiceArtifact {
 	public static class GlueTestServiceInstance implements ServiceInstance {
 
 		private GlueService service;
+		private boolean useJsonFormatting;
 
-		public GlueTestServiceInstance(GlueService service) {
+		public GlueTestServiceInstance(GlueService service, boolean useJsonFormatting) {
 			this.service = service;
+			this.useJsonFormatting = useJsonFormatting;
 		}
 		
 		@SuppressWarnings("unchecked")
@@ -91,12 +98,19 @@ public class GlueTestServiceArtifact extends GlueServiceArtifact {
 			ScriptRuntime currentRuntime = ScriptRuntime.getRuntime();
 			ScriptRuntime runtime = new ScriptRuntime(service.getScript(), new CombinedExecutionContextImpl(executionContext, service.getEnvironment(), service.getLabelEvaluator()), map);
 			StringWriter writer = new StringWriter();
-			MarkdownOutputFormatter formatter = new MarkdownOutputFormatter(writer);
-			if (currentRuntime != null) {
-				formatter.setParent(currentRuntime.getFormatter());
+			
+			if (useJsonFormatting) {
+				JSONOutputFormatter formatter = new JSONOutputFormatter(currentRuntime == null ? null : currentRuntime.getFormatter());
+				runtime.setFormatter(formatter);
 			}
-			formatter.setAllowDeepLogging(true);
-			runtime.setFormatter(formatter);
+			else {
+				MarkdownOutputFormatter formatter = new MarkdownOutputFormatter(writer);
+				if (currentRuntime != null) {
+					formatter.setParent(currentRuntime.getFormatter());
+				}
+				formatter.setAllowDeepLogging(true);
+				runtime.setFormatter(formatter);
+			}
 			runtime.run();
 			if (runtime.getException() != null) {
 				throw new ServiceException(runtime.getException());
@@ -109,8 +123,9 @@ public class GlueTestServiceArtifact extends GlueServiceArtifact {
 				output.set(element.getName(), runtime.getExecutionContext().getPipeline().get(element.getName()));
 			}
 			// map script result
-			List<GlueValidation> validations  = (List<GlueValidation>) runtime.getContext().get("$validation");
-			ScriptResult result = new SimpleScriptResult(service.getEnvironment(), runtime.getScript(), runtime.getStarted(), runtime.getStopped(), runtime.getException(), writer.toString(), validations == null ? new ArrayList<GlueValidation>() : validations);
+			List<GlueValidation> validations  = (List<GlueValidation>) runtime.getContext().get(TestMethods.VALIDATION);
+			List<GlueAttachment> attachments = (List<GlueAttachment>) runtime.getContext().get(ScriptMethods.ATTACHMENT);
+			ScriptResult result = new SimpleScriptResult(service.getEnvironment(), runtime.getScript(), runtime.getStarted(), runtime.getStopped(), runtime.getException(), writer.toString(), validations == null ? new ArrayList<GlueValidation>() : validations, attachments);
 			FormattedScriptResult format = FormattedScriptResult.format(result, null);
 			BeanInstance<FormattedScriptResult> beanInstance = new BeanInstance<FormattedScriptResult>(format);
 			output.set("result", beanInstance);
@@ -126,4 +141,13 @@ public class GlueTestServiceArtifact extends GlueServiceArtifact {
 		}
 
 	}
+
+	public boolean isUseJsonFormatting() {
+		return useJsonFormatting;
+	}
+
+	public void setUseJsonFormatting(boolean useJsonFormatting) {
+		this.useJsonFormatting = useJsonFormatting;
+	}
+
 }

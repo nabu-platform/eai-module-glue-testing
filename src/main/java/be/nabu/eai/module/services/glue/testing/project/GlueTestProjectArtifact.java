@@ -1,6 +1,7 @@
 package be.nabu.eai.module.services.glue.testing.project;
 
 import java.io.IOException;
+import java.io.StringWriter;
 import java.nio.charset.Charset;
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -19,10 +20,13 @@ import be.nabu.eai.repository.RepositoryThreadFactory;
 import be.nabu.eai.repository.api.Repository;
 import be.nabu.eai.repository.artifacts.jaxb.JAXBArtifact;
 import be.nabu.glue.api.ExecutionEnvironment;
+import be.nabu.glue.api.OutputFormatter;
+import be.nabu.glue.api.OutputFormatterProvider;
 import be.nabu.glue.api.ParserProvider;
 import be.nabu.glue.api.Script;
 import be.nabu.glue.api.ScriptFilter;
 import be.nabu.glue.api.ScriptRepository;
+import be.nabu.glue.api.ScriptRuntimeRunnableWrapper;
 import be.nabu.glue.api.runs.ScriptResult;
 import be.nabu.glue.api.runs.ScriptResultInterpretation;
 import be.nabu.glue.api.runs.ScriptResultInterpreter;
@@ -35,10 +39,14 @@ import be.nabu.glue.impl.MultithreadedScriptRunner;
 import be.nabu.glue.impl.SimpleExecutionEnvironment;
 import be.nabu.glue.impl.formatted.FormattedDashboard;
 import be.nabu.glue.impl.formatted.FormattedScriptResult;
+import be.nabu.glue.json.JSONOutputFormatter;
 import be.nabu.glue.services.ServiceMethodProvider;
+import be.nabu.glue.utils.ScriptRuntime;
 import be.nabu.glue.utils.ScriptUtils;
 import be.nabu.libs.resources.api.ResourceContainer;
 import be.nabu.libs.resources.memory.MemoryDirectory;
+import be.nabu.libs.services.ServiceRuntime;
+import be.nabu.libs.services.ServiceUtils;
 import be.nabu.libs.services.api.DefinedService;
 import be.nabu.libs.services.api.ExecutionContext;
 import be.nabu.libs.services.api.Service;
@@ -86,7 +94,7 @@ public class GlueTestProjectArtifact extends JAXBArtifact<GlueTestProjectConfigu
 		return null;
 	}
 
-	public static class GlueTestProjectInstance implements ServiceInstance {
+	public class GlueTestProjectInstance implements ServiceInstance {
 
 		private GlueTestProjectArtifact project;
 
@@ -124,6 +132,29 @@ public class GlueTestProjectArtifact extends JAXBArtifact<GlueTestProjectConfigu
 				}
 				ScriptRepository repository = new MatrixScriptRepository(new GlueTestProjectRepository(project), filter);
 				ScriptRunner runner = new MultithreadedScriptRunner(amountOfThreads == null ? 1 : amountOfThreads, maxScriptRuntime == null ? 300000 : maxScriptRuntime, false, new RepositoryThreadFactory(project.getRepository()));
+				((MultithreadedScriptRunner) runner).setRuntimeWrapper(new ScriptRuntimeRunnableWrapper() {
+					@Override
+					public Runnable wrap(ScriptRuntime runtime) {
+						return new Runnable() {
+							@Override
+							public void run() {
+								ServiceRuntime.setGlobalContext(new HashMap<String, Object>());
+								try {
+									runtime.run();
+								}
+								finally {
+									ServiceRuntime.setGlobalContext(null);
+								}
+							}
+						};
+					}
+				});
+				((MultithreadedScriptRunner) runner).setOutputFormatterProvider(new OutputFormatterProvider() {
+					@Override
+					public OutputFormatter newFormatter(OutputFormatter parent) {
+						return new JSONOutputFormatter(parent);
+					}
+				});
 				ExecutionEnvironment environment = new SimpleExecutionEnvironment("local");
 				List<ScriptResult> results = runner.run(environment, repository, filter, new EnvironmentLabelEvaluator(null));
 				List<FormattedScriptResult> formatted = new ArrayList<FormattedScriptResult>();

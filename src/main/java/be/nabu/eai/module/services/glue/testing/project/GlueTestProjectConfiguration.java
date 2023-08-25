@@ -12,9 +12,10 @@ import be.nabu.eai.repository.jaxb.ArtifactXMLAdapter;
 import be.nabu.libs.services.api.DefinedService;
 
 @XmlRootElement(name = "testProject")
-@XmlType(propOrder = { "amountOfThreads", "maxScriptRuntime", "tests" })
+@XmlType(propOrder = { "amountOfThreads", "maxScriptRuntime", "tests", "serviceContext" })
 public class GlueTestProjectConfiguration {
-	
+	// the service context where the test should be run in
+	private String serviceContext;
 	private List<DefinedService> tests;
 	private Integer amountOfThreads;
 	private Long maxScriptRuntime;
@@ -43,4 +44,12 @@ public class GlueTestProjectConfiguration {
 	public void setMaxScriptRuntime(Long maxScriptRuntime) {
 		this.maxScriptRuntime = maxScriptRuntime;
 	}
+	
+	public String getServiceContext() {
+		return serviceContext;
+	}
+	public void setServiceContext(String serviceContext) {
+		this.serviceContext = serviceContext;
+	}
+	
 }
