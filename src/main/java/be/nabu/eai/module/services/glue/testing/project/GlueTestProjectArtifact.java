@@ -1,7 +1,6 @@
 package be.nabu.eai.module.services.glue.testing.project;
 
 import java.io.IOException;
-import java.io.StringWriter;
 import java.nio.charset.Charset;
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -46,7 +45,6 @@ import be.nabu.glue.utils.ScriptUtils;
 import be.nabu.libs.resources.api.ResourceContainer;
 import be.nabu.libs.resources.memory.MemoryDirectory;
 import be.nabu.libs.services.ServiceRuntime;
-import be.nabu.libs.services.ServiceUtils;
 import be.nabu.libs.services.api.DefinedService;
 import be.nabu.libs.services.api.ExecutionContext;
 import be.nabu.libs.services.api.Service;
@@ -132,13 +130,22 @@ public class GlueTestProjectArtifact extends JAXBArtifact<GlueTestProjectConfigu
 				}
 				ScriptRepository repository = new MatrixScriptRepository(new GlueTestProjectRepository(project), filter);
 				ScriptRunner runner = new MultithreadedScriptRunner(amountOfThreads == null ? 1 : amountOfThreads, maxScriptRuntime == null ? 300000 : maxScriptRuntime, false, new RepositoryThreadFactory(project.getRepository()));
+				List<String> features = new ArrayList<String>();
+				// always add the feature "automated test" so we can differentiate easily
+				features.add("AUTOMATED_TEST");
+				features.add("TEST");
+				if (getConfig().getFeatures() != null) {
+					features.addAll(getConfig().getFeatures());
+				}
 				((MultithreadedScriptRunner) runner).setRuntimeWrapper(new ScriptRuntimeRunnableWrapper() {
 					@Override
 					public Runnable wrap(ScriptRuntime runtime) {
 						return new Runnable() {
 							@Override
 							public void run() {
-								ServiceRuntime.setGlobalContext(new HashMap<String, Object>());
+								HashMap<String, Object> globalContext = new HashMap<String, Object>();
+								globalContext.put(ServiceRuntime.ENABLED_FEATURES, features);
+								ServiceRuntime.setGlobalContext(globalContext);
 								try {
 									runtime.run();
 								}

@@ -33,8 +33,6 @@ import be.nabu.glue.services.CombinedExecutionContextImpl;
 import be.nabu.glue.services.ServiceMethodProvider;
 import be.nabu.glue.utils.ScriptRuntime;
 import be.nabu.libs.datastore.api.DataProperties;
-import be.nabu.libs.resources.ResourceFactory;
-import be.nabu.libs.resources.api.ReadableResource;
 import be.nabu.libs.resources.api.Resource;
 import be.nabu.libs.resources.memory.MemoryDirectory;
 import be.nabu.libs.resources.memory.MemoryItem;
@@ -55,7 +53,7 @@ public class Services {
 	private ExecutionContext executionContext;
 	private boolean generated;
 	
-	public GlueTestProjectOutput runScript(@WebParam(name = "script") String script, @WebParam(name = "id") String id, @WebParam(name = "matrix") String matrix, @WebParam(name = "resources") List<URI> resources, @WebParam(name = "attachments") List<TestAttachment> attachments) throws IOException, ServiceException, ParseException, URISyntaxException {
+	public GlueTestProjectOutput runScript(@WebParam(name = "script") String script, @WebParam(name = "id") String id, @WebParam(name = "matrix") String matrix, @WebParam(name = "resources") List<URI> resources, @WebParam(name = "attachments") List<TestAttachment> attachments, @WebParam(name = "features") List<String> features) throws IOException, ServiceException, ParseException, URISyntaxException {
 		MemoryDirectory root = new MemoryDirectory();
 		MemoryDirectory privateDirectory = (MemoryDirectory) root.create(EAIResourceRepository.PRIVATE, Resource.CONTENT_TYPE_DIRECTORY);
 		GlueTestServiceArtifact test = new GlueTestServiceArtifact(id, root, EAIResourceRepository.getInstance());
@@ -95,6 +93,9 @@ public class Services {
 			}
 		}
 		GlueTestProjectArtifact glueTestProjectArtifact = new GlueTestProjectArtifact(id + ".$project", root, EAIResourceRepository.getInstance());
+		if (features != null) {
+			glueTestProjectArtifact.getConfig().setFeatures(features);
+		}
 		glueTestProjectArtifact.getConfig().setTests(Arrays.asList(test));
 		ComplexContent output = glueTestProjectArtifact.newInstance().execute(executionContext, null);
 		return (GlueTestProjectOutput) output.get("result");

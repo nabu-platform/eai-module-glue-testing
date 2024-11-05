@@ -12,13 +12,15 @@ import be.nabu.eai.repository.jaxb.ArtifactXMLAdapter;
 import be.nabu.libs.services.api.DefinedService;
 
 @XmlRootElement(name = "testProject")
-@XmlType(propOrder = { "amountOfThreads", "maxScriptRuntime", "tests", "serviceContext" })
+@XmlType(propOrder = { "amountOfThreads", "maxScriptRuntime", "tests", "serviceContext", "features" })
 public class GlueTestProjectConfiguration {
 	// the service context where the test should be run in
 	private String serviceContext;
 	private List<DefinedService> tests;
 	private Integer amountOfThreads;
 	private Long maxScriptRuntime;
+	// the features you want enabled for this project
+	private List<String> features;
 	
 	@XmlJavaTypeAdapter(value = ArtifactXMLAdapter.class)
 	@InterfaceFilter(implement = "be.nabu.eai.module.services.glue.testing.TestCase.run")	
@@ -51,5 +53,11 @@ public class GlueTestProjectConfiguration {
 	public void setServiceContext(String serviceContext) {
 		this.serviceContext = serviceContext;
 	}
-	
+	public List<String> getFeatures() {
+		return features;
+	}
+	public void setFeatures(List<String> features) {
+		this.features = features;
+	}
+
 }
