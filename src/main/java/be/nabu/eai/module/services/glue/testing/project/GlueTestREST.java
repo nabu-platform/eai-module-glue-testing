@@ -1,6 +1,7 @@
 package be.nabu.eai.module.services.glue.testing.project;
 
 import java.util.List;
+import java.util.function.Consumer;
 
 import javax.ws.rs.Path;
 import javax.ws.rs.QueryParam;
@@ -12,6 +13,8 @@ import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.util.SystemPrincipal;
 import be.nabu.eai.server.Server;
 import be.nabu.glue.impl.ScriptResultListener;
+import be.nabu.glue.api.runs.ScriptResult;
+import be.nabu.libs.resources.memory.MemoryDirectory;
 import be.nabu.libs.services.api.ServiceException;
 import be.nabu.libs.types.TypeUtils;
 import be.nabu.libs.types.api.ComplexContent;
@@ -31,14 +34,14 @@ public class GlueTestREST {
 	
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public static GlueTestProjectOutput runAll(EAIResourceRepository repository, List<GlueTestServiceArtifact> tests, ScriptResultListener listener) throws ServiceException {
-		GlueTestProjectArtifact project = new GlueTestProjectArtifact("$generated", null, repository);
+		GlueTestProjectArtifact project = new GlueTestProjectArtifact("$generated", new MemoryDirectory(), repository);
 		List list = tests;
 		project.getConfig().setTests(list);
 		project.setResultListener(listener);
 		ComplexContent execute = project.newInstance().execute(repository.newExecutionContext(SystemPrincipal.ROOT), null);
 		return TypeUtils.getAsBean((ComplexContent) execute.get("result"), GlueTestProjectOutput.class);
 	}
-	
+
 	public static List<GlueTestServiceArtifact> filter(List<GlueTestServiceArtifact> artifacts, String id) {
 		return artifacts.stream()
 			.filter(artifact -> id == null || artifact.getId().startsWith(id + ".") || artifact.getId().equals(id))

@@ -56,6 +56,7 @@ import be.nabu.glue.impl.ScriptResultListener;
 import be.nabu.glue.impl.SimpleExecutionEnvironment;
 import be.nabu.glue.impl.formatted.FormattedDashboard;
 import be.nabu.glue.impl.formatted.FormattedScriptResult;
+import be.nabu.glue.impl.formatters.MarkdownOutputFormatter;
 import be.nabu.glue.json.JSONOutputFormatter;
 import be.nabu.glue.services.ServiceMethodProvider;
 import be.nabu.glue.utils.ScriptRuntime;
@@ -176,12 +177,12 @@ public class GlueTestProjectArtifact extends JAXBArtifact<GlueTestProjectConfigu
 						};
 					}
 				});
-				((MultithreadedScriptRunner) runner).setOutputFormatterProvider(new OutputFormatterProvider() {
-					@Override
-					public OutputFormatter newFormatter(OutputFormatter parent) {
-						return new JSONOutputFormatter(parent);
-					}
-				});
+//				((MultithreadedScriptRunner) runner).setOutputFormatterProvider(new OutputFormatterProvider() {
+//					@Override
+//					public OutputFormatter newFormatter(OutputFormatter parent) {
+//						return new JSONOutputFormatter(parent);
+//					}
+//				});
 				if (resultListener != null) {
 					((MultithreadedScriptRunner) runner).setResultListener(resultListener);
 				}
