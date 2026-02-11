@@ -52,6 +52,7 @@ import be.nabu.glue.core.impl.parsers.GlueParserProvider;
 import be.nabu.glue.core.repositories.DynamicScript;
 import be.nabu.glue.impl.MatrixScriptRepository;
 import be.nabu.glue.impl.MultithreadedScriptRunner;
+import be.nabu.glue.impl.ScriptResultListener;
 import be.nabu.glue.impl.SimpleExecutionEnvironment;
 import be.nabu.glue.impl.formatted.FormattedDashboard;
 import be.nabu.glue.impl.formatted.FormattedScriptResult;
@@ -73,6 +74,8 @@ import be.nabu.libs.types.api.ComplexContent;
 
 public class GlueTestProjectArtifact extends JAXBArtifact<GlueTestProjectConfiguration> implements DefinedService {
 
+	private ScriptResultListener resultListener;
+	
 	public static class GlueTestProjectOutput {
 		private List<FormattedScriptResult> results;
 		private FormattedDashboard summary;
@@ -179,6 +182,9 @@ public class GlueTestProjectArtifact extends JAXBArtifact<GlueTestProjectConfigu
 						return new JSONOutputFormatter(parent);
 					}
 				});
+				if (resultListener != null) {
+					((MultithreadedScriptRunner) runner).setResultListener(resultListener);
+				}
 				ExecutionEnvironment environment = new SimpleExecutionEnvironment("local");
 				List<ScriptResult> results = runner.run(environment, repository, filter, new EnvironmentLabelEvaluator(null));
 				List<FormattedScriptResult> formatted = new ArrayList<FormattedScriptResult>();
@@ -269,5 +275,13 @@ public class GlueTestProjectArtifact extends JAXBArtifact<GlueTestProjectConfigu
 			}
 		}
 		
+	}
+
+	public ScriptResultListener getResultListener() {
+		return resultListener;
+	}
+
+	public void setResultListener(ScriptResultListener resultListener) {
+		this.resultListener = resultListener;
 	}
 }
