@@ -128,6 +128,14 @@ public class GlueTestProjectArtifact extends JAXBArtifact<GlueTestProjectConfigu
 
 		@Override
 		public ComplexContent execute(ExecutionContext executionContext, ComplexContent input) throws ServiceException {
+			ComplexContent output = project.getServiceInterface().getOutputDefinition().newInstance();
+			output.set("result", executeDirect(input));
+			//output.set("results", formatted);
+			//output.set("summary", dashboard);
+			return output;
+		}
+
+		public GlueTestProjectOutput executeDirect(ComplexContent input) throws ServiceException {
 			try {
 				ScriptFilter filter = new ScriptFilter() {
 					@Override
@@ -196,11 +204,7 @@ public class GlueTestProjectArtifact extends JAXBArtifact<GlueTestProjectConfigu
 				GlueTestProjectOutput result = new GlueTestProjectOutput();
 				result.setResults(formatted);
 				result.setSummary(dashboard);
-				ComplexContent output = project.getServiceInterface().getOutputDefinition().newInstance();
-				output.set("result", result);
-				//output.set("results", formatted);
-				//output.set("summary", dashboard);
-				return output;
+				return result;
 			}
 			catch (IOException e) {
 				throw new ServiceException(e);

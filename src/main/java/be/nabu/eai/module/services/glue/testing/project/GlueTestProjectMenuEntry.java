@@ -2,6 +2,7 @@ package be.nabu.eai.module.services.glue.testing.project;
 
 import java.util.List;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,12 +16,16 @@ import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.glue.impl.ScriptResultListener;
 import be.nabu.glue.impl.formatted.FormattedScriptResult;
+import be.nabu.libs.validator.api.ValidationMessage.Severity;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TableView;
+import javafx.scene.layout.StackPane;
+import javafx.scene.shape.Circle;
 
 public class GlueTestProjectMenuEntry implements EntryContextMenuProvider {
 
@@ -42,13 +47,29 @@ public class GlueTestProjectMenuEntry implements EntryContextMenuProvider {
 					tests = GlueTestREST.filter(tests, entry.getId());
 					logger.info("Found " + tests.size() + " testcases");
 					List list = tests;
+					AtomicBoolean hasError = new AtomicBoolean(false);
 					Tab tab = MainController.getInstance().newTab("Testrun " + counter++);
+					tab.setClosable(false);
+					ProgressIndicator progressIndicator = new ProgressIndicator(ProgressIndicator.INDETERMINATE_PROGRESS);
+					progressIndicator.setPrefSize(16, 16);
+					Circle doneIndicator = new Circle(6);
+					doneIndicator.setVisible(false);
+					StackPane progressGraphic = new StackPane(progressIndicator, doneIndicator);
+					tab.setGraphic(progressGraphic);
 					TableView<FormattedScriptResult> results = new TableView<FormattedScriptResult>();
 					tab.setContent(TableTestCaseResults.build(results));
 					ScriptResultListener listener = result -> {
 						FormattedScriptResult formatted = result instanceof FormattedScriptResult ? (FormattedScriptResult) result : FormattedScriptResult.format(result, null);
 						logger.info(formatted.getNamespace() + "." + formatted.getName() + " => " + formatted.getAmountSuccessful() + " / " + formatted.getAmountValidations());
-						Platform.runLater(() -> results.getItems().add(formatted));
+						Severity severity = formatted.getSeverity();
+						boolean isError = Severity.ERROR.equals(severity) || Severity.CRITICAL.equals(severity);
+						hasError.compareAndSet(false, isError);
+						Platform.runLater(() -> {
+							results.getItems().add(formatted);
+							if (hasError.get()) {
+								progressIndicator.setStyle("-fx-progress-color: #d9534f;");
+							}
+						});
 					};
 					ForkJoinPool.commonPool().submit(() -> {
 						try {
@@ -56,6 +77,14 @@ public class GlueTestProjectMenuEntry implements EntryContextMenuProvider {
 						}
 						catch (Exception e) {
 							logger.error("Could not run all tests", e);
+						}
+						finally {
+							Platform.runLater(() -> {
+								progressIndicator.setVisible(false);
+								doneIndicator.setVisible(true);
+								doneIndicator.setStyle(hasError.get() ? "-fx-fill: #d9534f;" : "-fx-fill: #5cb85c;");
+								tab.setClosable(true);
+							});
 						}
 					});
 				}

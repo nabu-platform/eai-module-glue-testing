@@ -199,12 +199,12 @@ public class TableTestCaseResults {
         TableColumn<FormattedValidation, String> messageColumn = (TableColumn<FormattedValidation, String>) columns.get(1);
         messageColumn.setText("Description");
         messageColumn.setCellValueFactory(new PropertyValueFactory<FormattedValidation, String>("message"));
-        messageColumn.minWidthProperty().set(350);
+        messageColumn.minWidthProperty().set(150);
 
         TableColumn<FormattedValidation, String> checkColumn = (TableColumn<FormattedValidation, String>) columns.get(2);
         checkColumn.setText("Validation");
         checkColumn.setCellValueFactory(new PropertyValueFactory<FormattedValidation, String>("validation"));
-        checkColumn.minWidthProperty().set(450);
+        checkColumn.minWidthProperty().set(250);
 
         TableColumn<FormattedValidation, String> scriptColumn = (TableColumn<FormattedValidation, String>) columns.get(3);
         scriptColumn.setText("Location");
@@ -223,7 +223,7 @@ public class TableTestCaseResults {
                 return new SimpleStringProperty(builder.toString());
             }
         });
-        scriptColumn.minWidthProperty().set(200);
+        scriptColumn.minWidthProperty().set(0);
 
         TableColumn<FormattedValidation, String> lineColumn = (TableColumn<FormattedValidation, String>) columns.get(4);
         lineColumn.setText("Line");
