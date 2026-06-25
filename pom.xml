@@ -2,7 +2,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>nabu</groupId>
 	<artifactId>eai-module-glue-testing</artifactId>
-	<version>1.3</version>
+	<version>1.4-SNAPSHOT</version>
 	<name>eai-module-glue-testing</name>
 	<url>http://nabu.be</url>
 	<parent>
