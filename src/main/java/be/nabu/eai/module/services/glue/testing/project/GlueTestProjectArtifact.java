@@ -173,12 +173,15 @@ public class GlueTestProjectArtifact extends JAXBArtifact<GlueTestProjectConfigu
 							@Override
 							public void run() {
 								HashMap<String, Object> globalContext = new HashMap<String, Object>();
+								String scriptId = ScriptUtils.getFullName(runtime.getScript());
+								features.add(scriptId);
 								globalContext.put(ServiceRuntime.ENABLED_FEATURES, features);
 								ServiceRuntime.setGlobalContext(globalContext);
 								try {
 									runtime.run();
 								}
 								finally {
+									features.remove(scriptId);
 									ServiceRuntime.setGlobalContext(null);
 								}
 							}
