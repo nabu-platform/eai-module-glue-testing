@@ -172,8 +172,10 @@ public class GlueTestProjectArtifact extends JAXBArtifact<GlueTestProjectConfigu
 						return new Runnable() {
 							@Override
 							public void run() {
+								List<String> runtimeFeatures = new ArrayList<String>(features);
+								runtimeFeatures.add(ScriptUtils.getFullName(runtime.getScript()));
 								HashMap<String, Object> globalContext = new HashMap<String, Object>();
-								globalContext.put(ServiceRuntime.ENABLED_FEATURES, features);
+								globalContext.put(ServiceRuntime.ENABLED_FEATURES, runtimeFeatures);
 								ServiceRuntime.setGlobalContext(globalContext);
 								try {
 									runtime.run();
