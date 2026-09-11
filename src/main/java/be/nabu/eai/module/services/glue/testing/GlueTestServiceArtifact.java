@@ -311,7 +311,6 @@ public class GlueTestServiceArtifact extends GlueServiceArtifact implements Cach
 							}
 						};
 					}
-					break;
 				}
 			}
 		}
