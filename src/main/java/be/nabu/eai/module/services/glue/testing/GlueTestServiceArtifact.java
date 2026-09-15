@@ -270,7 +270,7 @@ public class GlueTestServiceArtifact extends GlueServiceArtifact implements Cach
 													throw new ServiceException(configuration.getErrorCode(), configuration.getErrorMessage());
 												}
 												else if (configuration.getOutput() == null || configuration.getOutput().trim().isEmpty()) {
-													return null;
+													return profile.getService().getServiceInterface().getOutputDefinition().newInstance();
 												}
 //												XMLBinding binding = new XMLBinding(profile.getService().getServiceInterface().getOutputDefinition(), Charset.forName("UTF-8"));
 //												binding.setIgnoreUndefined(true);

@@ -55,6 +55,52 @@ validateMatches("Reference is numeric", "[0-9]+", result/reference)
 validateFails("Invalid input is rejected", my.module.services.calculate(value: -1))
 ```
 
+### Test log descriptions
+
+Use `##` descriptions before meaningful test steps. Descriptions are included in the generated test log, making setup, execution, validation, and cleanup readable without inspecting the source.
+
+Descriptions may contain `${expression}` placeholders. They are evaluated against the current Glue context when the step runs, so include relevant identifiers and values:
+
+```glue
+## Create battery type: ${batteryTypeName}
+batteryType = bebatOne.crud.batteryType.services.create(
+	instance: structure(name: batteryTypeName))/instance
+
+## Validate generated battery type id: ${batteryType/id}
+confirmNotNull("Created battery type has an id", batteryType/id)
+
+## Remove price: ${price/id}
+bebatOne.crud.batteryTypePrice.services.delete(id: price/id)
+```
+
+Prefer descriptions that state the business action or expectation. Add them to significant steps rather than every assignment. Keep validation messages independently meaningful because descriptions provide narrative context while validations provide pass/fail details.
+
+### Safe pre-test cleanup
+
+Glue tests normally clean matching existing data at the start and leave the final test data available for inspection. Cleanup should rediscover old test data, but a destructive dependent query must not run when its prerequisite lookup is empty.
+
+A null or empty value in a CRUD filter may cause that filter field to be omitted. The query can then become unfiltered and return every record. Resolve prerequisite ids first, guard the dependent query with a non-empty check, and retain the bulk `in`-style query rather than issuing one query per parent.
+
+```glue
+batteryTypeIds = resolve(bebatOne.crud.batteryType.services.list(
+	filter: structure(name: batteryTypeName))/results/id)
+
+if (size(batteryTypeIds) > 0)
+	prices = resolve(bebatOne.crud.batteryTypePrice.services.list(
+		filter: structure(batteryTypeId: batteryTypeIds))/results)
+	for (price : prices)
+		## Remove price: ${price/id}
+		bebatOne.crud.batteryTypePrice.services.delete(id: price/id)
+```
+
+General rules for destructive cleanup:
+
+- Resolve lookup-derived filter values before constructing a dependent query.
+- Guard the dependent query with `size(values) > 0`; when no ids match, skip it entirely.
+- Preserve bulk filtering by passing the resolved id series once. Do not issue one dependent query per id unless required by the service contract.
+- Materialize finite result sets with `resolve()` before deleting from the same dataset.
+- Use named parameters for every Nabu service call.
+
 ### Service stubs
 
 A test can install a script-local service override with `stub(serviceId, lambda, condition)`:
