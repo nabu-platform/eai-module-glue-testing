@@ -66,6 +66,7 @@ import be.nabu.libs.resources.memory.MemoryDirectory;
 import be.nabu.libs.services.ServiceRuntime;
 import be.nabu.libs.services.api.DefinedService;
 import be.nabu.libs.services.api.ExecutionContext;
+import be.nabu.libs.services.api.FeaturedExecutionContext;
 import be.nabu.libs.services.api.Service;
 import be.nabu.libs.services.api.ServiceException;
 import be.nabu.libs.services.api.ServiceInstance;
@@ -177,6 +178,9 @@ public class GlueTestProjectArtifact extends JAXBArtifact<GlueTestProjectConfigu
 								HashMap<String, Object> globalContext = new HashMap<String, Object>();
 								globalContext.put(ServiceRuntime.ENABLED_FEATURES, runtimeFeatures);
 								ServiceRuntime.setGlobalContext(globalContext);
+								if (runtime.getExecutionContext() instanceof FeaturedExecutionContext) {
+									((FeaturedExecutionContext) runtime.getExecutionContext()).getEnabledFeatures().addAll(runtimeFeatures);
+								}
 								try {
 									runtime.run();
 								}

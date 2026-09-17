@@ -75,6 +75,37 @@ bebatOne.crud.batteryTypePrice.services.delete(id: price/id)
 
 Prefer descriptions that state the business action or expectation. Add them to significant steps rather than every assignment. Keep validation messages independently meaningful because descriptions provide narrative context while validations provide pass/fail details.
 
+### Safe service updates
+
+As described in the general Glue service guidance, Nabu services almost never treat omitted fields as "leave unchanged." This applies broadly to update-like services, including CRUD `update`: constructing an input with only changed fields can clear or overwrite omitted values.
+
+Fetch the current instance first, change only the intended values on that complete instance, then pass it to `update`:
+
+```glue
+current = bebatOne.crud.batteryType.services.get(id: batteryTypeId)/instance
+confirmNotNull("Battery type exists before update", current)
+
+current/name = updatedName
+updated = bebatOne.crud.batteryType.services.update(instance: current)/instance
+```
+
+When direct mutation is undesirable, derive a complete updated structure from the fetched instance:
+
+```glue
+current = bebatOne.crud.batteryType.services.get(id: batteryTypeId)/instance
+confirmNotNull("Battery type exists before update", current)
+updatedInput = structure(current, name: updatedName)
+updated = bebatOne.crud.batteryType.services.update(instance: updatedInput)/instance
+```
+
+General service update rules:
+
+- Fetch by id immediately before updating unless the test already holds the complete current instance.
+- Confirm the fetched instance exists before writing.
+- Preserve all untouched fields from that instance.
+- Apply only the intended field changes, then send the complete instance to `update`.
+- Use named parameters and select the actual output field from the service result.
+
 ### Safe pre-test cleanup
 
 Glue tests normally clean matching existing data at the start and leave the final test data available for inspection. Cleanup should rediscover old test data, but a destructive dependent query must not run when its prerequisite lookup is empty.
