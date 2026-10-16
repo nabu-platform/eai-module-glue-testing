@@ -6,6 +6,25 @@ A Glue test service has all `glueService` fragments plus `stub.xml`.
 
 Write tests in `script.glue`. Test checks return a boolean and add a validation to the test report.
 
+Use a script-level `@context` to select the service context for the entire test, including individually dispatched calls in smart mode. Leave a blank line after the annotation so Glue attaches it to the script root rather than the first statement:
+
+```glue
+@context bebatOne
+
+result = bebatOne.services.example()
+```
+
+An explicit `nabu.utils.Runtime.setServiceContext` call is still available, but is not needed to establish the test's initial context. In smart mode, a remotely dispatched setter call does not change the context of later calls; use `@context` for the test-wide setting.
+
+To run subsequent calls as a specific user, call the test-only `runAs(name, realm)` method at the start of the test. It upgrades the running test security context, including the context forwarded by smart dispatch. The named user must be resolvable in the target environment.
+
+```glue
+@context bebatOne
+
+runAs("test-user", "users")
+result = bebatOne.services.example()
+```
+
 ### Non-fatal validations
 
 `validate...` records success or failure and continues execution:
@@ -54,6 +73,19 @@ validateEquals("Double the supplied value", 4, result/value)
 validateMatches("Reference is numeric", "[0-9]+", result/reference)
 validateFails("Invalid input is rejected", my.module.services.calculate(value: -1))
 ```
+
+### Committing an asynchronous test step
+
+Use Nabu's `@transaction` annotation when a test calls a service that schedules follow-up work on commit, then waits for that work. Keep polling and assertions outside the annotated scope so the task can see committed input. Prefer a single annotated call; use an annotated `sequence` when multiple steps must commit together. On an uncaught failure the scope rolls back, and the surrounding default transaction is restored.
+
+```glue
+@transaction
+my.module.services.startProcess(request: request)
+
+wait(until(lambda(my.module.services.isComplete(id: request/id)/complete), timeout: 30000))
+```
+
+`@transaction` also works on nested groups, including `catch` and `finally`, but is not supported at script root. This is Nabu-specific and requires the updated Glue runtime; it is not a substitute for `stub.xml` at external service boundaries.
 
 ### Test log descriptions
 
@@ -133,14 +165,6 @@ General rules for destructive cleanup:
 - Use named parameters for every Nabu service call.
 
 ### Service stubs
-
-A test can install a script-local service override with `stub(serviceId, lambda, condition)`:
-
-```glue
-stub("my.module.services.lookup", lambda(input, structure(name: "Example")), null)
-```
-
-`serviceId` is the fully qualified Nabu service id. The lambda supplies the replacement behavior. `condition` is optional and allows conditional matching. Prefer inline stubs when behavior is naturally expressed in Glue; use `stub.xml` for configured request/response fixtures.
 
 ## stub.xml
 

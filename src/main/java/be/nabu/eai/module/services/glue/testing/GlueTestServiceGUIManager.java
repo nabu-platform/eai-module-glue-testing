@@ -30,6 +30,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.slf4j.LoggerFactory;
+
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -93,6 +95,7 @@ import be.nabu.glue.utils.ScriptUtils;
 import be.nabu.jfx.control.ace.AceEditor;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
+import be.nabu.libs.services.ServiceRuntime;
 import be.nabu.libs.services.api.DefinedService;
 import be.nabu.libs.services.api.ExecutionContext;
 import be.nabu.libs.services.api.FeaturedExecutionContext;
@@ -174,6 +177,7 @@ public class GlueTestServiceGUIManager extends GlueServiceGUIManager {
 		};
 		ExecutionContext context = EAIResourceRepository.getInstance().newExecutionContext(SystemPrincipal.ROOT);
 		if (context instanceof FeaturedExecutionContext) {
+			((FeaturedExecutionContext) context).getEnabledFeatures().add("TEST");
 			((FeaturedExecutionContext) context).getEnabledFeatures().add(artifact.getId());
 		}
 		CombinedExecutionContext combinedExecutionContext = new CombinedExecutionContextImpl(context, executionEnvironment, new LabelEvaluator() {
@@ -274,7 +278,25 @@ public class GlueTestServiceGUIManager extends GlueServiceGUIManager {
 					}
 				}));
 				
-				Thread runThread = new Thread(runtime);
+				Thread runThread = new Thread(() -> {
+					Map<String, Object> previousContext = ServiceRuntime.getGlobalContext();
+					try {
+						String annotatedContext = GlueTestServiceArtifact.getAnnotatedServiceContext(script);
+						if (annotatedContext != null && !annotatedContext.isBlank()) {
+							Map<String, Object> context = previousContext == null ? new HashMap<String, Object>() : new HashMap<String, Object>(previousContext);
+							context.put("service.context", annotatedContext);
+							ServiceRuntime.setGlobalContext(context);
+						}
+						runtime.run();
+					}
+					catch (IOException | ParseException e) {
+						LoggerFactory.getLogger(GlueTestServiceGUIManager.class).error("Could not read test service context", e);
+						throw new IllegalStateException(e);
+					}
+					finally {
+						ServiceRuntime.setGlobalContext(previousContext);
+					}
+				});
 				runThread.setDaemon(true);
 				runThread.start();
 			}

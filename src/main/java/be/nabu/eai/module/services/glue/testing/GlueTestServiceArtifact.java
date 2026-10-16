@@ -36,6 +36,7 @@ import be.nabu.eai.module.services.glue.GlueServiceArtifact;
 import be.nabu.eai.module.services.glue.testing.RunProfileConfiguration.ServiceConfiguration;
 import be.nabu.eai.module.services.glue.testing.RunProfileConfiguration.ServiceProfile;
 import be.nabu.eai.repository.api.Repository;
+import be.nabu.glue.api.Script;
 import be.nabu.glue.api.runs.GlueAttachment;
 import be.nabu.glue.api.runs.GlueValidation;
 import be.nabu.glue.api.runs.ScriptResult;
@@ -48,6 +49,7 @@ import be.nabu.glue.impl.formatters.MarkdownOutputFormatter;
 import be.nabu.glue.json.JSONOutputFormatter;
 import be.nabu.glue.services.CombinedExecutionContextImpl;
 import be.nabu.glue.services.GlueService;
+import be.nabu.glue.services.GlueServiceFormatter;
 import be.nabu.glue.utils.ScriptRuntime;
 import be.nabu.libs.cache.api.Cache;
 import be.nabu.libs.cache.api.CacheProvider;
@@ -101,7 +103,7 @@ public class GlueTestServiceArtifact extends GlueServiceArtifact implements Cach
 	@Override
 	public ServiceInstance newInstance() {
 		GlueTestServiceInstance glueTestServiceInstance = new GlueTestServiceInstance(getService(), useJsonFormatting);
-		glueTestServiceInstance.setEnabledFeatures(List.of(getId()));
+		glueTestServiceInstance.setEnabledFeatures(List.of("TEST", getId()));
 		return glueTestServiceInstance;
 	}
 
@@ -123,6 +125,11 @@ public class GlueTestServiceArtifact extends GlueServiceArtifact implements Cach
 
 	protected void reset() {
 		service = null;
+	}
+
+	public static String getAnnotatedServiceContext(Script script) throws IOException, ParseException {
+		return script.getRoot() == null || script.getRoot().getContext() == null || script.getRoot().getContext().getAnnotations() == null
+			? null : script.getRoot().getContext().getAnnotations().get("context");
 	}
 	
 	public class GlueTestServiceInstance implements ServiceInstance {
@@ -155,19 +162,40 @@ public class GlueTestServiceArtifact extends GlueServiceArtifact implements Cach
 			
 //			dynamicCacheProvider = new DynamicCacheProvider(runtime, executionContext);
 			
+			GlueServiceFormatter serviceFormatter = new GlueServiceFormatter(ServiceRuntime.getRuntime().getRuntimeTracker(), currentRuntime == null ? null : currentRuntime.getFormatter());
 			if (useJsonFormatting) {
-				JSONOutputFormatter formatter = new JSONOutputFormatter(currentRuntime == null ? null : currentRuntime.getFormatter());
+				JSONOutputFormatter formatter = new JSONOutputFormatter(serviceFormatter);
 				runtime.setFormatter(formatter);
 			}
 			else {
 				MarkdownOutputFormatter formatter = new MarkdownOutputFormatter(writer);
-				if (currentRuntime != null) {
-					formatter.setParent(currentRuntime.getFormatter());
-				}
+				formatter.setParent(serviceFormatter);
 				formatter.setAllowDeepLogging(true);
 				runtime.setFormatter(formatter);
 			}
-			runtime.run();
+			ServiceRuntime serviceRuntime = ServiceRuntime.getRuntime();
+			Map<String, Object> serviceContext = serviceRuntime.getContext();
+			boolean hadContext = serviceContext.containsKey("service.context");
+			Object previousContext = serviceContext.get("service.context");
+			try {
+				String annotatedContext = getAnnotatedServiceContext(service.getScript());
+				if (annotatedContext != null && !annotatedContext.isBlank()) {
+					serviceContext.put("service.context", annotatedContext);
+				}
+				runtime.run();
+			}
+			catch (IOException | ParseException e) {
+				logger.error("Could not read test service context", e);
+				throw new ServiceException(e);
+			}
+			finally {
+				if (hadContext) {
+					serviceContext.put("service.context", previousContext);
+				}
+				else {
+					serviceContext.remove("service.context");
+				}
+			}
 			if (runtime.getException() != null) {
 				throw new ServiceException(runtime.getException());
 			}

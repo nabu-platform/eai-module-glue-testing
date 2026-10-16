@@ -63,6 +63,11 @@ public class CustomFormatter implements OutputFormatter {
 	}
 
 	@Override
+	public void error(Executor executor, Exception exception) {
+		chained.error(executor, exception);
+	}
+
+	@Override
 	public void validated(final GlueValidation...validations) {
 		handler.validate(validations);
 		for (GlueValidation validation : validations) {

@@ -177,6 +177,16 @@ public class GlueTestProjectArtifact extends JAXBArtifact<GlueTestProjectConfigu
 								runtimeFeatures.add(ScriptUtils.getFullName(runtime.getScript()));
 								HashMap<String, Object> globalContext = new HashMap<String, Object>();
 								globalContext.put(ServiceRuntime.ENABLED_FEATURES, runtimeFeatures);
+								try {
+									String annotatedContext = GlueTestServiceArtifact.getAnnotatedServiceContext(runtime.getScript());
+									if (annotatedContext != null && !annotatedContext.isBlank()) {
+										globalContext.put("service.context", annotatedContext);
+									}
+								}
+								catch (IOException | ParseException e) {
+									LoggerFactory.getLogger(GlueTestProjectArtifact.class).error("Could not read test service context", e);
+									throw new IllegalStateException(e);
+								}
 								ServiceRuntime.setGlobalContext(globalContext);
 								if (runtime.getExecutionContext() instanceof FeaturedExecutionContext) {
 									((FeaturedExecutionContext) runtime.getExecutionContext()).getEnabledFeatures().addAll(runtimeFeatures);
