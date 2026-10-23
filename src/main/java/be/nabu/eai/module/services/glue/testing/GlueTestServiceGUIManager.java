@@ -46,6 +46,7 @@ import javafx.scene.Node;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
@@ -405,11 +406,13 @@ public class GlueTestServiceGUIManager extends GlueServiceGUIManager {
 		});
 		buttons.getChildren().add(create);
 		
-		pane.getChildren().add(box);
-		AnchorPane.setBottomAnchor(box, 0d);
-		AnchorPane.setTopAnchor(box, 0d);
-		AnchorPane.setRightAnchor(box, 0d);
-		AnchorPane.setLeftAnchor(box, 0d);
+		ScrollPane scroll = new ScrollPane(box);
+		scroll.setFitToWidth(true);
+		pane.getChildren().add(scroll);
+		AnchorPane.setBottomAnchor(scroll, 0d);
+		AnchorPane.setTopAnchor(scroll, 0d);
+		AnchorPane.setRightAnchor(scroll, 0d);
+		AnchorPane.setLeftAnchor(scroll, 0d);
 	}
 	
 	
