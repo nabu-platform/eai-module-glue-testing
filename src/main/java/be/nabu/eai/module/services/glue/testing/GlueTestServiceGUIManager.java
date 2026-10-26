@@ -35,8 +35,7 @@ import org.slf4j.LoggerFactory;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
+import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -46,13 +45,13 @@ import javafx.scene.Node;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
 import javafx.scene.control.TitledPane;
 import javafx.scene.control.TabPane.TabClosingPolicy;
 import javafx.scene.input.KeyCode;
@@ -60,6 +59,7 @@ import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
@@ -72,7 +72,6 @@ import be.nabu.eai.developer.util.Confirm;
 import be.nabu.eai.developer.util.EAIDeveloperUtils;
 import be.nabu.eai.developer.util.Confirm.ConfirmType;
 import be.nabu.eai.developer.util.EAIDeveloperUtils.PropertiesHandler;
-import be.nabu.eai.developer.util.EAIDeveloperUtils.PropertyUpdaterListener;
 import be.nabu.eai.module.services.glue.GlueServiceArtifact;
 import be.nabu.eai.module.services.glue.GlueServiceGUIManager;
 import be.nabu.eai.module.services.glue.testing.CustomFormatter.Handler;
@@ -480,28 +479,99 @@ public class GlueTestServiceGUIManager extends GlueServiceGUIManager {
 	
 	protected void drawServiceConfiguration(String id, RunProfileConfiguration runProfile, ServiceProfile profile, VBox parent, ServiceConfiguration configuration) {
 		BooleanProperty hasLock = MainController.getInstance().hasLock(id);
-		SimplePropertyUpdater updater = EAIDeveloperUtils.createUpdater(configuration, new PropertyUpdaterListener() {
-			@Override
-			public boolean updateProperty(Property<?> property, Object value) {
-				MainController.getInstance().setChanged();
-				return true;
+		SimplePropertyUpdater conditionsUpdater = EAIDeveloperUtils.createUpdater(configuration, null, "output", "script", "mode", "errorCode", "errorMessage");
+		conditionsUpdater.setSourceId(id);
+		SimplePropertyUpdater errorsUpdater = EAIDeveloperUtils.createUpdater(configuration, null, "output", "script", "mode", "inputQueries");
+		errorsUpdater.setSourceId(id);
+		for (Property<?> property : errorsUpdater.getSupportedProperties()) {
+			((SimpleProperty<?>) property).setTitle("In Static mode, a non-null error code (even an empty string) throws a ServiceException with the error message instead of returning output. An error message alone does not throw. Script mode ignores these fields.");
+		}
+		VBox profileInstanceBox = new VBox(12);
+		profileInstanceBox.setPadding(new Insets(10));
+		VBox conditions = new VBox(6);
+		Label conditionsLabel = new Label("Conditions");
+		MainController.getInstance().attachTooltip(conditionsLabel, "Conditions are evaluated first; the first matching configuration determines the response.");
+		VBox conditionProperties = new VBox();
+		conditions.getChildren().addAll(conditionsLabel, conditionProperties);
+		conditionProperties.getChildren().addListener((ListChangeListener<Node>) change -> {
+			while (change.next()) {
+				if (change.wasAdded()) {
+					GridPane grid = (GridPane) ((ScrollPane) ((AnchorPane) change.getAddedSubList().get(0)).getChildren().get(0)).getContent();
+					int count = configuration.getInputQueries() == null ? 0 : configuration.getInputQueries().size();
+					for (int index = 0; index < count; index++) {
+						final int position = index;
+						Button remove = new Button("Delete");
+						remove.disableProperty().bind(hasLock.not());
+						remove.setOnAction(event -> {
+							for (Property<?> property : conditionsUpdater.getSupportedProperties()) {
+								if (property.getName().equals("inputQueries[" + position + "]")) {
+									conditionsUpdater.updateProperty(property, null);
+									MainController.getInstance().showProperties(conditionsUpdater, conditionProperties, true);
+									break;
+								}
+							}
+						});
+						grid.add(remove, 2, index);
+					}
+				}
 			}
-		}, "output");
-		updater.setSourceId(id);
-		VBox profileInstanceBox = new VBox();
-		
-		VBox inputQueryContainer = new VBox();
-		VBox box = new VBox();
-		box.setPadding(new Insets(10));
-		MainController.getInstance().showProperties(updater, box, false);
+		});
+		MainController.getInstance().showProperties(conditionsUpdater, conditionProperties, true);
+		VBox box = new VBox(10);
+		VBox errorProperties = new VBox();
+		MainController.getInstance().showProperties(errorsUpdater, errorProperties, false);
+		ComboBox<String> mode = new ComboBox<String>();
+		mode.getItems().addAll("static", "script");
+		mode.getSelectionModel().select("script".equals(configuration.getMode()) ? "script" : "static");
+		HBox outputButtons = new HBox(10);
+		outputButtons.disableProperty().bind(hasLock.not());
+		VBox staticContent = new VBox(10);
+		VBox outputContent = new VBox();
+		staticContent.getChildren().addAll(errorProperties, outputContent, outputButtons);
+		setComplexContent(runProfile, profile, configuration, outputContent, null, outputButtons, "application/json");
+		AceEditor scriptEditor = new AceEditor();
+		scriptEditor.setContent("text/x-glue", configuration.getScript() == null ? "" : configuration.getScript());
+		scriptEditor.setReadOnly(!hasLock.get());
+		hasLock.addListener((observable, previous, locked) -> scriptEditor.setReadOnly(!locked));
+		scriptEditor.subscribe(AceEditor.CHANGE, event -> {
+			configuration.setScript(scriptEditor.getContent());
+			MainController.getInstance().setChanged();
+		});
+		scriptEditor.subscribe(AceEditor.SAVE, event -> {
+			configuration.setScript(scriptEditor.getContent());
+			try {
+				MainController.getInstance().save(id);
+				event.consume();
+			}
+			catch (IOException e) {
+				LoggerFactory.getLogger(GlueTestServiceGUIManager.class).error("Could not save stub script", e);
+				MainController.getInstance().notify(e);
+			}
+		});
+		scriptEditor.getWebView().focusedProperty().addListener((observable, previous, focused) -> {
+			if (!focused && !java.util.Objects.equals(configuration.getScript(), scriptEditor.getContent())) {
+				configuration.setScript(scriptEditor.getContent());
+				MainController.getInstance().setChanged();
+			}
+		});
+		mode.setMaxWidth(Double.MAX_VALUE);
+		mode.setPrefWidth(250);
+		HBox modeRow = new HBox(10);
+		modeRow.getChildren().addAll(new Label("Response mode"), mode);
+		box.getChildren().addAll(modeRow, staticContent, scriptEditor.getWebView());
+		staticContent.visibleProperty().bind(mode.valueProperty().isEqualTo("static"));
+		staticContent.managedProperty().bind(staticContent.visibleProperty());
+		scriptEditor.getWebView().visibleProperty().bind(mode.valueProperty().isEqualTo("script"));
+		scriptEditor.getWebView().managedProperty().bind(scriptEditor.getWebView().visibleProperty());
+		mode.disableProperty().bind(hasLock.not());
+		mode.valueProperty().addListener((observable, previous, selected) -> {
+			configuration.setScript(scriptEditor.getContent());
+			configuration.setMode(selected);
+			MainController.getInstance().setChanged();
+		});
 		
 		HBox buttons = new HBox();
-		setComplexContent(runProfile, profile, configuration, box, null, buttons, "application/json");
-		
-//		box.getChildren().add(formats);
-		
 		buttons.disableProperty().bind(hasLock.not());
-		buttons.setPadding(new Insets(10));
 		Button delete = new Button("Delete Configuration");
 		delete.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
@@ -516,57 +586,11 @@ public class GlueTestServiceGUIManager extends GlueServiceGUIManager {
 				});
 			}
 		});
-		Button addCondition = new Button("Add Condition");
-		addCondition.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
-			@Override
-			public void handle(ActionEvent event) {
-				if (configuration.getInputQueries() == null) {
-					configuration.setInputQueries(new ArrayList<String>());
-				}
-				configuration.getInputQueries().add("true");
-				MainController.getInstance().setChanged();
-				drawInputQueries(inputQueryContainer, configuration);
-			}
-		});
-		drawInputQueries(inputQueryContainer, configuration);
-		buttons.getChildren().addAll(delete, addCondition);
-		profileInstanceBox.getChildren().addAll(inputQueryContainer, box, buttons);
+		buttons.getChildren().add(delete);
+		profileInstanceBox.getChildren().addAll(conditions, box, buttons);
 		parent.getChildren().addAll(profileInstanceBox);
 	}
 	
-	private void drawInputQueries(VBox container, ServiceConfiguration configuration) {
-		container.getChildren().clear();
-		if (configuration.getInputQueries() != null) {
-			for (int i = 0; i < configuration.getInputQueries().size(); i++) {
-				String query = configuration.getInputQueries().get(i);
-				HBox box = new HBox();
-				TextField field = new TextField();
-				Button button = new Button("Remove");
-				final int pos = i;
-				button.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
-					@Override
-					public void handle(ActionEvent arg0) {
-						configuration.getInputQueries().remove(pos);
-						drawInputQueries(container, configuration);
-						MainController.getInstance().setChanged();
-					}
-				});
-				field.setText(query);
-				field.textProperty().addListener(new ChangeListener<String>() {
-					@Override
-					public void changed(ObservableValue<? extends String> arg0, String arg1, String arg2) {
-						configuration.getInputQueries().set(pos, arg2);
-						MainController.getInstance().setChanged();
-					}
-				});
-				box.setPadding(new Insets(10));
-				HBox.setMargin(button, new Insets(0, 0, 10, 0));
-				box.getChildren().addAll(field, button);
-				container.getChildren().add(box);
-			}
-		}
-	}
-
 	private void setComplexContent(RunProfileConfiguration runProfile, ServiceProfile profile, ServiceConfiguration configuration, VBox box, String newContent, HBox buttons, String contentType) {
 		ComplexType outputDefinition = profile.getService().getServiceInterface().getOutputDefinition();
 //		XMLBinding binding = new XMLBinding(outputDefinition, Charset.forName("UTF-8"));

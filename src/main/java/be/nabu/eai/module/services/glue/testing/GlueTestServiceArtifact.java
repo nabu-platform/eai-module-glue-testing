@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -267,6 +268,7 @@ public class GlueTestServiceArtifact extends GlueServiceArtifact implements Cach
 							}
 							@Override
 							public Object get(Object key) throws IOException {
+								boolean scriptMatch = false;
 								try {
 									// we expect the service input here
 									if (key instanceof ComplexContent || key == null) {
@@ -294,7 +296,11 @@ public class GlueTestServiceArtifact extends GlueServiceArtifact implements Cach
 											}
 											// if we have a match, return the stored output
 											if (matches) {
-												if (configuration.getErrorCode() != null) {
+												if ("script".equals(configuration.getMode())) {
+											scriptMatch = true;
+											return executeStubScript(profile, configuration, (ComplexContent) key);
+										}
+										if (configuration.getErrorCode() != null) {
 													throw new ServiceException(configuration.getErrorCode(), configuration.getErrorMessage());
 												}
 												else if (configuration.getOutput() == null || configuration.getOutput().trim().isEmpty()) {
@@ -314,6 +320,9 @@ public class GlueTestServiceArtifact extends GlueServiceArtifact implements Cach
 								}
 								catch (Exception e) {
 									logger.error("Could not establish runtime profile for " + getId() + " service " + profile.getService().getId(), e);
+									if (scriptMatch) {
+										throw new IOException("Could not execute stub for " + profile.getService().getId(), e);
+									}
 								}
 								return null;
 							}
@@ -343,6 +352,55 @@ public class GlueTestServiceArtifact extends GlueServiceArtifact implements Cach
 			}
 		}
 		return null;
+	}
+
+	@SuppressWarnings("unchecked")
+	private ComplexContent executeStubScript(ServiceProfile profile, ServiceConfiguration configuration, ComplexContent input) throws Exception {
+		if (configuration.getScript() == null || configuration.getScript().isBlank()) {
+			throw new IllegalArgumentException("Empty stub script for " + profile.getService().getId());
+		}
+		GlueServiceArtifact artifact = new GlueServiceArtifact(getId() + ".stub" + UUID.randomUUID().toString().replace("-", ""), getDirectory(), getRepository());
+		artifact.setContent(configuration.getScript());
+		GlueService scriptService = new GlueService(artifact.getScript(), artifact.getExecutionEnvironment(), null);
+		scriptService.setImplementedInterface(profile.getService().getServiceInterface());
+
+		ServiceRuntime current = ServiceRuntime.getRuntime();
+		ExecutionContext original = current.getExecutionContext();
+		List<String> features = original instanceof FeaturedExecutionContext
+			? new ArrayList<String>(((FeaturedExecutionContext) original).getEnabledFeatures()) : new ArrayList<String>();
+		features.removeIf(getId()::equals);
+		ExecutionContext scoped = new CombinedExecutionContextImpl(original, artifact.getExecutionEnvironment(), scriptService.getLabelEvaluator()) {
+			@Override
+			public List<String> getEnabledFeatures() {
+				return features;
+			}
+		};
+		Map<String, Object> previousGlobal = ServiceRuntime.getGlobalContext();
+		Map<String, Object> previous = current.getContext();
+		Map<String, Object> scopedContext = new HashMap<String, Object>(previous);
+		Object configured = scopedContext.get(ServiceRuntime.ENABLED_FEATURES);
+		if (configured instanceof List) {
+			List<String> runtimeFeatures = new ArrayList<String>((List<String>) configured);
+			runtimeFeatures.removeIf(getId()::equals);
+			scopedContext.put(ServiceRuntime.ENABLED_FEATURES, runtimeFeatures);
+		}
+		current.setContext(scopedContext);
+		try {
+			ServiceRuntime.setGlobalContext(scopedContext);
+			ComplexContent result = scriptService.newInstance().execute(scoped, input);
+			if (result == null) {
+				throw new IllegalStateException("Stub script returned null for " + profile.getService().getId());
+			}
+			ComplexContent output = profile.getService().getServiceInterface().getOutputDefinition().newInstance();
+			for (Element<?> element : TypeUtils.getAllChildren(output.getType())) {
+				output.set(element.getName(), result.get(element.getName()));
+			}
+			return output;
+		}
+		finally {
+			current.setContext(previous);
+			ServiceRuntime.setGlobalContext(previousGlobal);
+		}
 	}
 
 	@Override

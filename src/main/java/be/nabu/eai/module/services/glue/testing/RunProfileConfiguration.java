@@ -30,7 +30,20 @@ public class RunProfileConfiguration {
 	public static class ServiceConfiguration {
 		private List<String> inputQueries;
 		private String output;
+		private String mode, script;
 		private String errorMessage, errorCode;
+		public String getMode() {
+			return mode;
+		}
+		public void setMode(String mode) {
+			this.mode = mode;
+		}
+		public String getScript() {
+			return script;
+		}
+		public void setScript(String script) {
+			this.script = script;
+		}
 		public List<String> getInputQueries() {
 			return inputQueries;
 		}

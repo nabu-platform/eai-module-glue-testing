@@ -187,8 +187,28 @@ General rules for destructive cleanup:
 - `service` is the fully qualified service artifact id.
 - Each `inputQueries` expression is evaluated against the service input; all configured expressions must match.
 - A configuration without input queries matches a null input.
-- `output` is JSON matching the referenced service's output definition. Empty output returns null.
+- Omit `mode` (or set it to `static`) for legacy static fixtures: `output` is JSON matching the referenced service's output definition. Empty output returns an empty output structure.
 - Set `errorCode` and optionally `errorMessage` instead of `output` to simulate a service error.
+- Set `<mode>script</mode>` and embed Glue source in `<script><![CDATA[...]]></script>` inside a `configurations` element for a dynamic response. Script mode ignores `output`, `errorCode` and `errorMessage`; switching modes preserves all fields. Match queries and configuration ordering are unchanged.
+- The embedded script inherits the target service input and output contracts. Input fields are available directly; mark returned fields with `@return` and use the target output field names. The owning testcase feature is disabled for synchronous script calls so the script can call the original target service without recursively stubbing itself. `TEST` and other features remain enabled; a script may explicitly re-enable the testcase feature. Async/remote calls are outside this synchronous feature scope.
+
+Example for a target service with input `customerId` and output `name`:
+
+```xml
+<runProfile>
+	<profiles>
+		<service>my.module.services.lookup</service>
+		<configurations>
+			<inputQueries>customerId != null</inputQueries>
+			<mode>script</mode>
+			<script><![CDATA[@return
+name = "Customer " + customerId]]></script>
+		</configurations>
+	</profiles>
+</runProfile>
+```
+
+To pass through the original service with rewritten input, use `original = my.module.services.lookup(customerId: "override")` then `@return` followed by `name = original/name`. Script errors, invalid output and invalid Glue syntax fail the stub call rather than falling through to the real service.
 - Configurations are checked in order; the first match supplies the stubbed result.
 
 The XML and referenced artifacts are validated while loading before persistence. Preserve unrelated profiles when editing one fixture.
