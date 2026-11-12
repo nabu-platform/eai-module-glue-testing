@@ -33,14 +33,22 @@ public class GlueTestREST {
 	public GlueTestProjectOutput run(@QueryParam("id") String id, @QueryParam("concurrency") Integer threadCount) throws ServiceException {
 		List<GlueTestServiceArtifact> artifacts = server.getRepository().getArtifacts(GlueTestServiceArtifact.class);
 		artifacts = filter(artifacts, id);
-		return runAll((EAIResourceRepository) server.getRepository(), artifacts, null);
+		return runAll((EAIResourceRepository) server.getRepository(), artifacts, null, threadCount);
 	}
 	
-	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public static GlueTestProjectOutput runAll(EAIResourceRepository repository, List<GlueTestServiceArtifact> tests, ScriptResultListener listener) throws ServiceException {
+		return runAll(repository, tests, listener, null);
+	}
+
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	public static GlueTestProjectOutput runAll(EAIResourceRepository repository, List<GlueTestServiceArtifact> tests, ScriptResultListener listener, Integer threadCount) throws ServiceException {
+		if (threadCount != null && threadCount < 1) {
+			throw new IllegalArgumentException("concurrency must be at least 1");
+		}
 		GlueTestProjectArtifact project = new GlueTestProjectArtifact("$generated", new MemoryDirectory(), repository);
 		List list = tests;
 		project.getConfig().setTests(list);
+		project.getConfig().setAmountOfThreads(threadCount);
 		project.setResultListener(listener);
 		GlueTestProjectInstance newInstance = (GlueTestProjectInstance) project.newInstance();
 		return newInstance.executeDirect(null);
