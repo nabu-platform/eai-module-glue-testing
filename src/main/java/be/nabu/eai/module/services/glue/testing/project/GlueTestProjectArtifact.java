@@ -64,6 +64,7 @@ import be.nabu.glue.utils.ScriptUtils;
 import be.nabu.libs.resources.api.ResourceContainer;
 import be.nabu.libs.resources.memory.MemoryDirectory;
 import be.nabu.libs.services.ServiceRuntime;
+import be.nabu.libs.services.ServiceUtils;
 import be.nabu.libs.services.api.DefinedService;
 import be.nabu.libs.services.api.ExecutionContext;
 import be.nabu.libs.services.api.FeaturedExecutionContext;
@@ -137,6 +138,11 @@ public class GlueTestProjectArtifact extends JAXBArtifact<GlueTestProjectConfigu
 		}
 
 		public GlueTestProjectOutput executeDirect(ComplexContent input) throws ServiceException {
+			String serviceContext = getConfig().getServiceContext();
+			if (serviceContext == null || serviceContext.isBlank()) {
+				serviceContext = ServiceUtils.getServiceContext(ServiceRuntime.getRuntime(), false);
+			}
+			final String callerServiceContext = serviceContext;
 			try {
 				ScriptFilter filter = new ScriptFilter() {
 					@Override
@@ -177,6 +183,9 @@ public class GlueTestProjectArtifact extends JAXBArtifact<GlueTestProjectConfigu
 								runtimeFeatures.add(ScriptUtils.getFullName(runtime.getScript()));
 								HashMap<String, Object> globalContext = new HashMap<String, Object>();
 								globalContext.put(ServiceRuntime.ENABLED_FEATURES, runtimeFeatures);
+								if (callerServiceContext != null) {
+									globalContext.put("service.context", callerServiceContext);
+								}
 								try {
 									String annotatedContext = GlueTestServiceArtifact.getAnnotatedServiceContext(runtime.getScript());
 									if (annotatedContext != null && !annotatedContext.isBlank()) {
